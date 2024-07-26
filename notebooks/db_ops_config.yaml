@@ -99,3 +99,35 @@ operations:
       type: text_output
       settings:
         display: execution_log
+
+  - name: show_pg_cron_tables_overview
+    type: data_retrieval
+    description: Display important metadata about the tables of pg_cron
+    sql_command: |
+      SELECT 
+        (SELECT COUNT(*) FROM cron.job) AS number_of_rows_in_cron_job,
+        (SELECT COUNT(*) FROM cron.job_run_details) AS number_of_rows_in_cron_job_run_details,
+        (SELECT MIN(start_time) FROM cron.job_run_details) AS oldest_run_date;
+    
+  - name: show_pg_cron_jobs_history_overview
+    type: data_retrieval
+    description: Display an overview about the history of each job, such as how many times it run in the last X days, avg duration, max duration
+    sql_command: |
+      SELECT
+        j.jobid,
+        j.jobname,
+        COUNT(jrd.*) AS total_runs,
+        SUM(CASE WHEN jrd.status = 'succeeded' THEN 1 ELSE 0 END) AS success_count,
+        SUM(CASE WHEN jrd.status = 'failed' THEN 1 ELSE 0 END) AS failure_count,
+        ROUND((SUM(CASE WHEN jrd.status = 'succeeded' THEN 1 ELSE 0 END)::DECIMAL / COUNT(jrd.*)) * 100, 2) AS success_percentage,
+        ROUND((SUM(CASE WHEN jrd.status = 'failed' THEN 1 ELSE 0 END)::DECIMAL / COUNT(jrd.*)) * 100, 2) AS failure_percentage
+      FROM
+          cron.job j
+      JOIN
+          cron.job_run_details jrd ON j.jobid = jrd.jobid
+      WHERE
+          jrd.start_time >= CURRENT_DATE - INTERVAL '30 days'
+      GROUP BY
+          j.jobid, j.jobname
+      ORDER BY
+          j.jobid;

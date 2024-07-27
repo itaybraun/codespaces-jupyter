@@ -38,10 +38,7 @@ operations:
         pg_stat_user_tables
       ORDER BY 
         total_size_bytes DESC;
-    parameters:
-      - name: database
-        type: string
-        description: Name of the database to analyze
+    parameters: []
     visualization:
       type: data_table
       settings:
@@ -71,6 +68,7 @@ operations:
       - name: search_expression
         type: string
         description: Search expression to filter configuration parameters
+        default: ''
     visualization:
       type: data_table
       settings:
@@ -126,8 +124,13 @@ operations:
       JOIN
           cron.job_run_details jrd ON j.jobid = jrd.jobid
       WHERE
-          jrd.start_time >= CURRENT_DATE - INTERVAL '30 days'
+          jrd.start_time >= CURRENT_DATE - INTERVAL ':duration_interval'
       GROUP BY
           j.jobid, j.jobname
       ORDER BY
           j.jobid;
+    parameters:
+      - name: duration_interval
+        type: string
+        description: And valid inverval such as '30 Days' or '1 Hour'. No need to provide a singel quote before and after the interval.
+        default: '30 days'
